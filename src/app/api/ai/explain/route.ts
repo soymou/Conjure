@@ -1,47 +1,25 @@
 import { NextResponse } from "next/server";
 
-const MODEL = "google/flan-t5-base";
+const MODEL = process.env.HUGGINGFACE_MODEL?.trim() || "google/flan-t5-base";
 const MAX_INPUT_LENGTH = 6_000;
 const MAX_TOKENS = 256;
 
 function buildPrompt(text: string) {
-  return `Explica en lenguaje claro y resumido el siguiente extracto jurídico (no más de 3 párrafos):\n\n${text}`;
+  return `Eres una asistente jurídica que explica jurisprudencia mexicana a personas no especialistas. Resume el extracto en lenguaje llano (máximo 3 párrafos), resalta los puntos clave en frases tipo viñeta y evita copiar literalmente, salvo que sea absolutamente necesario.\n\nTexto original:\n${text}`;
 }
 
 function extractSummary(payload: unknown) {
-  if (Array.isArray(payload)) {
-    return payload
-      .map((item) => {
-        if (!item) return "";
-        if (typeof item === "string") return item;
-        return (item as { generated_text?: string; summary_text?: string }).generated_text ||
-          (item as { generated_text?: string; summary_text?: string }).summary_text ||
-          "";
-      })
-      .filter(Boolean)
-      .join("\n")
-      .trim();
-  }
-
-  if (typeof payload === "string") {
-    return payload.trim();
-  }
-
-  if (typeof payload === "object" && payload !== null) {
-    return (
-      (payload as { generated_text?: string }).generated_text ||
-      (payload as { summary_text?: string }).summary_text ||
-      ""
-    ).trim();
-  }
-
+  if (!payload || typeof payload !== "object") return "";
+  const candidate = (payload as { generated_text?: string; summary_text?: string }).generated_text ||
+    (payload as { generated_text?: string; summary_text?: string }).summary_text;
+  if (candidate && typeof candidate === "string") return candidate.trim();
   return "";
 }
 
 export async function POST(req: Request) {
-  const HuggingFaceKey = process.env.HUGGINGFACE_API_KEY;
+  const huggingFaceKey = process.env.HUGGINGFACE_API_KEY?.trim();
 
-  if (!HuggingFaceKey) {
+  if (!huggingFaceKey) {
     return NextResponse.json(
       { error: "HUGGINGFACE_API_KEY no está configurada en el entorno del servidor." },
       { status: 503 }
@@ -62,34 +40,42 @@ export async function POST(req: Request) {
 
   const prompt = buildPrompt(text.slice(0, MAX_INPUT_LENGTH));
 
-  const response = await fetch(`https://api-inference.huggingface.co/models/${MODEL}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${HuggingFaceKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: MAX_TOKENS,
-        temperature: 0.3,
-        return_full_text: false,
+  let response: Response;
+  try {
+    response = await fetch(`https://router.huggingface.co/models/${MODEL}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${huggingFaceKey}`,
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+          max_new_tokens: MAX_TOKENS,
+          temperature: 0.3,
+        },
+        options: { wait_for_model: true },
+      }),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "No se pudo conectar con Hugging Face: " + (error as Error).message },
+      { status: 502 }
+    );
+  }
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message = (data && (data as { error?: string }).error) || response.statusText;
-    return NextResponse.json({ error: message }, { status: response.status });
+    const message = data && (data as { error?: string }).error;
+    return NextResponse.json({ error: message || `Hugging Face respondió con ${response.status}.` }, { status: response.status });
   }
 
   const summary = extractSummary(data);
 
   if (!summary) {
     return NextResponse.json(
-      { error: "No se obtuvo una explicación válida del modelo." },
+      { error: "Hugging Face no devolvió una explicación válida." },
       { status: 502 }
     );
   }
