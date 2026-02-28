@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const MODEL = process.env.HUGGINGFACE_MODEL?.trim() || "google/flan-t5-base";
+const MODEL_PATH = encodeURIComponent(MODEL);
 const MAX_INPUT_LENGTH = 6_000;
 const MAX_TOKENS = 256;
 
@@ -10,7 +11,8 @@ function buildPrompt(text: string) {
 
 function extractSummary(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
-  const candidate = (payload as { generated_text?: string; summary_text?: string }).generated_text ||
+  const candidate =
+    (payload as { generated_text?: string; summary_text?: string }).generated_text ||
     (payload as { generated_text?: string; summary_text?: string }).summary_text;
   if (candidate && typeof candidate === "string") return candidate.trim();
   return "";
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
 
   let response: Response;
   try {
-    response = await fetch(`https://router.huggingface.co/models/${MODEL}`, {
+    response = await fetch(`https://router.huggingface.co/models/${MODEL_PATH}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${huggingFaceKey}`,
