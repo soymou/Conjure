@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SearchBar } from "@/components/search/search-bar";
-import { Scale, BookOpen, FileText, ArrowRight } from "lucide-react";
+import { BrainCircuit, BookOpen, FileText, ArrowRight } from "lucide-react";
 
 const sections = [
   {
@@ -17,7 +17,7 @@ const sections = [
     href: "/jurisprudencia",
     label: "Jurisprudencia",
     desc: "Semanario Judicial de la Federación",
-    icon: Scale,
+    icon: BrainCircuit,
     count: "250k+",
   },
   {
@@ -41,23 +41,28 @@ export default function Home() {
         {/* Tag */}
         <div className="animate-fade-in rounded-full border border-accent/20 bg-accent/5 px-4 py-1.5">
           <p className="text-2xs font-medium tracking-wide text-accent">
-            Consulta jurídica mexicana
+            Consulta jurídica inteligente
           </p>
         </div>
 
         {/* Title */}
-        <h1
-          className="mt-5 text-gradient text-5xl font-bold tracking-tight sm:text-6xl"
-          style={{ animationDelay: "100ms" }}
-        >
-          Conjure
-        </h1>
+        <div className="mt-5 text-center">
+          <h1 className="text-5xl font-bold leading-tight tracking-tight sm:text-6xl"
+              style={{ animationDelay: "100ms", paddingBottom: "0.1em" }}>
+            <span className="text-gradient">Abogac</span>
+            <span className="relative inline-flex items-center">
+              <span className="animate-glow font-black text-accent">IA</span>
+              <BrainCircuit className="absolute -right-8 -top-1 h-6 w-6 text-accent opacity-75" />
+            </span>
+          </h1>
+        </div>
+
         <p
           className="mt-3 max-w-xl animate-fade-in text-center text-base leading-relaxed text-fg-2"
           style={{ animationDelay: "200ms" }}
         >
-          Busca leyes, artículos y jurisprudencia de México en un solo lugar.
-          Información pública, accesible y organizada.
+          Busca leyes, artículos y jurisprudencia de México con inteligencia artificial.
+          Información pública, accesible y organizada de forma inteligente.
         </p>
 
         {/* Search */}

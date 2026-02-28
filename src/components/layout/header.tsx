@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, Scale } from "lucide-react";
+import { BrainCircuit, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/leyes", label: "Leyes" },
   { href: "/jurisprudencia", label: "Jurisprudencia" },
-  { href: "/articulos", label: "Artículos" },
+  { href: "/articulos", label: "Artículos" },
 ];
 
 export function Header() {
@@ -35,10 +35,10 @@ export function Header() {
         className="flex items-center gap-2 transition-opacity hover:opacity-80"
       >
         <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">
-          <Scale className="h-3 w-3 text-accent" />
+          <BrainCircuit className="h-3.5 w-3.5 text-accent" />
         </div>
         <span className="text-[13px] font-bold tracking-tight text-fg">
-          Conjure
+          Abogac<span className="text-accent">IA</span>
         </span>
       </Link>
 

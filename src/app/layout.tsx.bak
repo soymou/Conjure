@@ -13,21 +13,21 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://abogacia.app"),
+  metadataBase: new URL("https://conjure.app"),
   title: {
-    default: "AbogacIA | Consulta jurídica inteligente",
-    template: "%s | AbogacIA",
+    default: "Conjure | Consulta jurídica mexicana",
+    template: "%s | Conjure",
   },
-  description: "Consulta leyes, artículos y jurisprudencia mexicana con inteligencia artificial en una interfaz rápida y simple.",
+  description: "Consulta leyes, artículos y jurisprudencia mexicana en una interfaz rápida y simple.",
   openGraph: {
-    title: "AbogacIA",
-    description: "Consulta jurídica inteligente",
+    title: "Conjure",
+    description: "Consulta jurídica mexicana",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AbogacIA",
-    description: "Consulta jurídica inteligente",
+    title: "Conjure",
+    description: "Consulta jurídica mexicana",
   },
 };
 

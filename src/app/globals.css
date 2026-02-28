@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-color: #ff5757;
+}
+
 @layer base {
   body {
     @apply bg-bg text-fg-2 antialiased;
@@ -19,6 +23,17 @@
 ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
 ::selection { background: rgba(255, 87, 87, 0.2); }
+
+/* Hero glow effect */
+.bg-hero-glow {
+  background: radial-gradient(
+    800px circle at 50% 100px,
+    rgba(255, 87, 87, 0.15),
+    rgba(255, 87, 87, 0.075) 20%,
+    rgba(255, 87, 87, 0.025) 40%,
+    transparent 60%
+  );
+}
 
 /* Staggered fade-up for lists */
 .stagger-fade-up > * {
@@ -57,7 +72,7 @@
 
 /* Gradient text */
 .text-gradient {
-  background: linear-gradient(135deg, #ffe8e8 0%, #ff9494 50%, #ff5757 100%);
+  background: linear-gradient(135deg, #fff 0%, #ffcaca 50%, #ff5757 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -95,6 +110,14 @@
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 20px var(--accent-color), 0 0 40px var(--accent-color)/30; }
+  50% { text-shadow: 0 0 25px var(--accent-color), 0 0 50px var(--accent-color)/40; }
+}
+.animate-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes pulse-subtle {
