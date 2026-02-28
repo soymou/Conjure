@@ -109,6 +109,7 @@ function normalizeAnswerText(raw: unknown) {
       return m[1]
         .replace(/\\n/g, "\n")
         .replace(/\\"/g, '"')
+        .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
         .trim();
     }
   }
