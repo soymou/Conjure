@@ -11,54 +11,59 @@ function buildPrompt(text: string) {
 
 function extractSummary(payload: unknown) {
   if (!payload || typeof payload !== "object") return "";
-  if (Array.isArray((payload as { choices?: unknown[] }).choices)) {
-    const choice = ((payload as { choices?: { message?: { content?: string } }[] }).choices ?? [])[0];
-    const content = choice?.message?.content;
+  const choices = (payload as { choices?: { message?: { content?: string } }[] }).choices;
+  if (Array.isArray(choices) && choices.length > 0) {
+    const content = choices[0]?.message?.content;
     if (typeof content === "string" && content.trim()) return content.trim();
   }
-  if (typeof payload === "object") {
-    const generated = (payload as { generated_text?: string }).generated_text;
-    if (typeof generated === "string" && generated.trim()) return generated.trim();
-  }
+  const generated = (payload as { generated_text?: string }).generated_text;
+  if (typeof generated === "string" && generated.trim()) return generated.trim();
   return "";
 }
 
 async function callRouter(prompt: string, key: string) {
-  const response = await fetch(`https://router.huggingface.co/v1/chat/completions`, {
+  const payload = {
+    model: MODEL,
+    messages: [
+      { role: "system", content: "Eres un asistente jurídico" },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: MAX_TOKENS,
+    temperature: 0.3,
+  };
+  console.log("Hugging Face router payload:", payload);
+
+  return fetch(`https://router.huggingface.co/v1/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: "system", content: "Eres un asistente jurídico" }, { role: "user", content: prompt }],
-      max_tokens: MAX_TOKENS,
-      temperature: 0.3,
-    }),
+    body: JSON.stringify(payload),
     next: { revalidate: 0 },
   });
-  return response;
 }
 
 async function callLegacy(prompt: string, key: string) {
-  const response = await fetch(`https://api-inference.huggingface.co/models/${MODEL}`, {
+  const payload = {
+    inputs: prompt,
+    parameters: {
+      max_new_tokens: MAX_TOKENS,
+      temperature: 0.3,
+    },
+    options: { wait_for_model: true },
+  };
+  console.log("Hugging Face legacy payload:", payload);
+
+  return fetch(`https://api-inference.huggingface.co/models/${MODEL}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: MAX_TOKENS,
-        temperature: 0.3,
-      },
-      options: { wait_for_model: true },
-    }),
+    body: JSON.stringify(payload),
     next: { revalidate: 0 },
   });
-  return response;
 }
 
 async function requestHuggingFace(prompt: string, key: string) {
@@ -68,7 +73,7 @@ async function requestHuggingFace(prompt: string, key: string) {
     const text = await routerResponse.text().catch(() => "");
     if (!text.includes("router.huggingface.co")) return routerResponse;
   } catch (error) {
-    console.warn("Router call failed", error);
+    console.warn("Router fallback", error);
   }
   return callLegacy(prompt, key);
 }
@@ -108,6 +113,7 @@ export async function POST(req: Request) {
   }
 
   const data = await response.json().catch(() => null);
+
   if (!response.ok) {
     const message = data && (data as { error?: string }).error;
     return NextResponse.json({ error: message || `Hugging Face respondió con ${response.status}.` }, { status: response.status });
