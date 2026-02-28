@@ -3,10 +3,63 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { useAiExplain } from "@/hooks/use-ai-explain";
+import { sanitizeHtml } from "@/lib/utils";
 
 interface ExplainPanelProps {
   text: string;
   helper?: ReactNode;
+}
+
+
+function renderMarkdown(md: string) {
+  const escaped = md
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const lines = escaped.split(/\r?\n/);
+  let html = "";
+  let inList = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+
+    if (!line) {
+      if (inList) {
+        html += "</ul>";
+        inList = false;
+      }
+      continue;
+    }
+
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (bullet) {
+      if (!inList) {
+        html += '<ul class="list-disc pl-5 space-y-1">';
+        inList = true;
+      }
+      html += `<li>${bullet[1]}</li>`;
+      continue;
+    }
+
+    if (inList) {
+      html += "</ul>";
+      inList = false;
+    }
+
+    html += `<p>${line}</p>`;
+  }
+
+  if (inList) html += "</ul>";
+
+  const formatted = html
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  return sanitizeHtml(formatted);
 }
 
 export function ExplainPanel({ text, helper }: ExplainPanelProps) {
@@ -24,8 +77,8 @@ export function ExplainPanel({ text, helper }: ExplainPanelProps) {
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-fg">Explicación en lenguaje llano</p>
-            <p className="text-2xs text-fg-4">Basado en el modelo gratuito <span className="font-mono">google/flan-t5-base</span> de Hugging Face.</p>
+            <p className="text-sm font-semibold text-fg">Explicación en lenguaje claro</p>
+            <p className="text-2xs text-fg-4">Generado con Hugging Face.</p>
           </div>
           <button
             disabled={!canExplain || status === "loading"}
@@ -54,7 +107,9 @@ export function ExplainPanel({ text, helper }: ExplainPanelProps) {
         )}
         {summary && (
           <div className="rounded-xl border border-border/50 bg-bg/10 p-3 text-[13px] leading-relaxed text-fg">
-            <p>{summary}</p>
+            <div className="space-y-2 prose prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0">
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
+            </div>
           </div>
         )}
         {status === "loading" && (

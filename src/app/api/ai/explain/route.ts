@@ -6,7 +6,7 @@ const MAX_INPUT_LENGTH = 6_000;
 const MAX_TOKENS = 256;
 
 function buildPrompt(text: string) {
-  return `Eres una asistente jurídica que explica jurisprudencia mexicana a personas no especialistas. Resume el extracto en lenguaje llano (máximo 3 párrafos), resalta los puntos clave en frases tipo viñeta y evita copiar literalmente, salvo que sea absolutamente necesario.\n\nTexto original:\n${text}`;
+  return `Eres una asistente jurídica que explica jurisprudencia mexicana a personas no especialistas. Resume el extracto en lenguaje claro (máximo 3 párrafos), resalta los puntos clave en frases tipo viñeta y evita copiar literalmente, salvo que sea absolutamente necesario.\n\nTexto original:\n${text}`;
 }
 
 function extractSummary(payload: unknown) {
