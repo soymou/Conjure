@@ -17,12 +17,20 @@ type StructuredExplain = {
   citations: Citation[];
 };
 
+type QAItem = {
+  question: string;
+  answer: string;
+  citations: Citation[];
+  createdAt: string;
+};
+
 export function useAiExplain() {
   const [status, setStatus] = useState<Status>("idle");
   const [summary, setSummary] = useState("");
   const [structured, setStructured] = useState<StructuredExplain | null>(null);
   const [answer, setAnswer] = useState("");
   const [answerCitations, setAnswerCitations] = useState<Citation[]>([]);
+  const [qaHistory, setQaHistory] = useState<QAItem[]>([]);
   const [error, setError] = useState<string | undefined>();
 
   const explain = useCallback(async (text: string, mode: ExplainMode) => {
@@ -78,8 +86,19 @@ export function useAiExplain() {
 
       if (!payload?.answer) throw new Error("El servicio no devolvió una respuesta válida.");
 
-      setAnswer(payload.answer);
-      setAnswerCitations(Array.isArray(payload.citations) ? payload.citations : []);
+      const nextAnswer = String(payload.answer);
+      const nextCitations = Array.isArray(payload.citations) ? payload.citations : [];
+      setAnswer(nextAnswer);
+      setAnswerCitations(nextCitations);
+      setQaHistory((prev) => [
+        {
+          question: question.trim(),
+          answer: nextAnswer,
+          citations: nextCitations,
+          createdAt: new Date().toISOString(),
+        },
+        ...prev,
+      ].slice(0, 8));
       setStatus("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
@@ -87,14 +106,19 @@ export function useAiExplain() {
     }
   }, [status]);
 
+  const clearHistory = useCallback(() => {
+    setQaHistory([]);
+  }, []);
+
   const reset = useCallback(() => {
     setStatus("idle");
     setSummary("");
     setStructured(null);
     setAnswer("");
     setAnswerCitations([]);
+    setQaHistory([]);
     setError(undefined);
   }, []);
 
-  return { explain, ask, reset, summary, structured, answer, answerCitations, status, error };
+  return { explain, ask, clearHistory, reset, summary, structured, answer, answerCitations, qaHistory, status, error };
 }
