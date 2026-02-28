@@ -65,7 +65,7 @@ export default async function JurisprudenciaDetallePage({ params }: { params: { 
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(detalle.texto || "Sin contenido.") }}
       />
       <ExplainPanel
-        text={detalle.texto || detalle.textoSnippet || ""}
+        text={String(detalle.texto ?? detalle.textoSnippet ?? "")}
         helper="Generado con un modelo gratuito compartido (Hugging Face)."
       />
     </div>
