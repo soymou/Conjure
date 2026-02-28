@@ -25,6 +25,73 @@ type QAItem = {
 };
 
 
+function parseJsonLoose(raw: string) {
+  const text = raw.trim();
+  if (!text) return null;
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = (fenced?.[1] ?? text).trim();
+
+  try {
+    return JSON.parse(candidate) as Record<string, unknown>;
+  } catch {
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(candidate.slice(start, end + 1)) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((i): i is string => typeof i === "string" && Boolean(i.trim())).map((i) => i.trim())
+    : [];
+}
+
+function normalizeStructuredFromAny(raw: unknown): StructuredExplain | null {
+  const parsed =
+    typeof raw === "string"
+      ? parseJsonLoose(raw)
+      : raw && typeof raw === "object"
+        ? (raw as Record<string, unknown>)
+        : null;
+
+  if (!parsed) return null;
+
+  const executive = typeof parsed.executive === "string" ? parsed.executive.trim() : "";
+  const recommendation = typeof parsed.recommendation === "string" ? parsed.recommendation.trim() : "";
+  const keyPoints = toStringArray(parsed.keyPoints);
+  const favors = toStringArray(parsed.favors);
+  const limits = toStringArray(parsed.limits);
+  const risks = toStringArray(parsed.risks);
+  const citations = Array.isArray(parsed.citations)
+    ? parsed.citations
+        .map((it) => (it && typeof it === "object" && typeof (it as { quote?: unknown }).quote === "string"
+          ? { quote: String((it as { quote: string }).quote).trim() }
+          : null))
+        .filter((it): it is Citation => Boolean(it && it.quote))
+        .slice(0, 4)
+    : [];
+
+  if (!executive) return null;
+
+  return {
+    executive,
+    keyPoints,
+    favors,
+    limits,
+    risks,
+    recommendation,
+    citations,
+  };
+}
+
 function normalizeAnswerText(raw: unknown) {
   if (typeof raw !== "string") return "";
   const text = raw.trim();
@@ -81,8 +148,11 @@ export function useAiExplain() {
 
       if (!payload?.summary) throw new Error("El servicio no devolvió un resumen válido.");
 
-      setSummary(payload.summary);
-      setStructured(payload.structured ?? null);
+      const normalizedStructured = normalizeStructuredFromAny(payload.structured)
+        ?? normalizeStructuredFromAny(payload.summary);
+
+      setSummary(normalizedStructured?.executive || String(payload.summary));
+      setStructured(normalizedStructured);
       setStatus("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
