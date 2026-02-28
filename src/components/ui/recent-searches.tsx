@@ -1,10 +1,11 @@
 interface RecentSearchesProps {
   searches: string[];
   onSelect: (query: string) => void;
+  onClear?: () => void;
   max?: number;
 }
 
-export function RecentSearches({ searches, onSelect, max = 5 }: RecentSearchesProps) {
+export function RecentSearches({ searches, onSelect, onClear, max = 5 }: RecentSearchesProps) {
   if (!searches.length) return null;
 
   return (
@@ -19,6 +20,14 @@ export function RecentSearches({ searches, onSelect, max = 5 }: RecentSearchesPr
           {query}
         </button>
       ))}
+      {onClear && (
+        <button
+          onClick={onClear}
+          className="rounded-md border border-border/40 px-2 py-1 text-2xs text-fg-4/70 hover:border-accent/20 hover:text-accent"
+        >
+          limpiar
+        </button>
+      )}
     </div>
   );
 }

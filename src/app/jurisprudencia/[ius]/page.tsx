@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ExplainPanel } from "@/components/ui/explain-panel";
 import type { JurisprudenciaDetalle } from "@/types/api";
 import { sanitizeHtml } from "@/lib/utils";
 
@@ -62,6 +63,10 @@ export default async function JurisprudenciaDetallePage({ params }: { params: { 
       <article
         className="rounded-xl border border-border/60 bg-surface/60 px-4 py-4 text-[12px] leading-relaxed text-fg-3 shadow-card backdrop-blur-sm"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(detalle.texto || "Sin contenido.") }}
+      />
+      <ExplainPanel
+        text={detalle.texto || detalle.textoSnippet || ""}
+        helper="Generado con un modelo gratuito compartido (Hugging Face)."
       />
     </div>
   );
