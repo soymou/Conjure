@@ -126,9 +126,8 @@ function extractAnswerFromRaw(raw: string) {
   const m = text.match(/["']?answer["']?\s*:\s*"([\s\S]*?)"\s*(?:,|})/i);
   if (m?.[1]) {
     return m[1]
-      .replace(/\n/g, "
-")
-      .replace(/\"/g, '"')
+      .replace(/\\n/g, "\n")
+      .replace(/\\"/g, '"')
       .trim();
   }
 
