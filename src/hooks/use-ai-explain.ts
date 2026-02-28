@@ -16,6 +16,8 @@ export function useAiExplain() {
     setError(undefined);
     setSummary("");
 
+    console.log("/api/ai/explain payload", { text });
+
     try {
       const res = await fetch("/api/ai/explain", {
         method: "POST",
