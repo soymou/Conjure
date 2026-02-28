@@ -24,6 +24,31 @@ type QAItem = {
   createdAt: string;
 };
 
+
+function normalizeAnswerText(raw: unknown) {
+  if (typeof raw !== "string") return "";
+  const text = raw.trim();
+  if (!text) return "";
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = (fenced?.[1] ?? text).trim();
+
+  try {
+    const parsed = JSON.parse(candidate) as { answer?: unknown };
+    if (typeof parsed?.answer === "string" && parsed.answer.trim()) return parsed.answer.trim();
+  } catch {
+    const m = candidate.match(/["']?answer["']?\s*:\s*"([\s\S]*?)"\s*(?:,|})/i);
+    if (m?.[1]) {
+      return m[1]
+        .replace(/\\n/g, "\n")
+        .replace(/\\"/g, '"')
+        .trim();
+    }
+  }
+
+  return text;
+}
+
 export function useAiExplain() {
   const [status, setStatus] = useState<Status>("idle");
   const [summary, setSummary] = useState("");
@@ -86,7 +111,7 @@ export function useAiExplain() {
 
       if (!payload?.answer) throw new Error("El servicio no devolvió una respuesta válida.");
 
-      const nextAnswer = String(payload.answer);
+      const nextAnswer = normalizeAnswerText(payload.answer);
       const nextCitations = Array.isArray(payload.citations) ? payload.citations : [];
       setAnswer(nextAnswer);
       setAnswerCitations(nextCitations);
