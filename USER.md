@@ -1,11 +1,5 @@
-# USER.md - About Your Human
-
+# USER.md
 - **Name:** mou
-- **What to call them:** mou
-- **Pronouns:**
+- **Call:** mou
 - **Timezone:** CST (America/Mexico_City)
-- **Notes:** Matemático apasionado por las computadoras y la tecnología; usa la IA como puerta de entrada al mundo de modelos. Prefiere que trabajemos como colegas y con un tono cálido y buena onda.
-
-## Context
-- Quiere configuraciones claras, explicaciones conceptuales y ayuda con programación.
-- Nos comunicamos en español.
+- **Notes:** Matemático apasionado por computadoras y tecnología, usa la IA como entrada al mundo de modelos. Prefiere español y tono de colega.
