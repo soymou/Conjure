@@ -8,14 +8,18 @@ import { JurisprudenciaCard } from "@/components/results/jurisprudencia-card";
 import { Pagination } from "@/components/results/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { RecentSearches } from "@/components/ui/recent-searches";
 import { useJurisprudencia } from "@/hooks/use-jurisprudencia";
 import { useRecentSearches } from "@/hooks/use-recent-searches";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useJurisprudenciaCompare } from "@/hooks/use-jurisprudencia-compare";
+import { buildQueryString, getEnumParam, getNumberParam, getStringParam } from "@/lib/query-params";
 import { Scale, ArrowRightLeft, X, Trash2 } from "lucide-react";
 
 const SIZE = 20;
-type SortMode = "fecha_desc" | "fecha_asc" | "ius_desc" | "ius_asc";
+const SORTS = ["fecha_desc", "fecha_asc", "ius_desc", "ius_asc"] as const;
+type SortMode = (typeof SORTS)[number];
 
 function Content() {
   const params = useSearchParams();
@@ -24,20 +28,23 @@ function Content() {
   const { getAll } = useFavorites();
   const compare = useJurisprudenciaCompare();
 
-  const [query, setQuery] = useState(params.get("q") ?? "");
-  const [page, setPage] = useState(Number(params.get("page") ?? "0") || 0);
-  const [instancia, setInstancia] = useState(params.get("instancia") ?? "all");
-  const [epoca, setEpoca] = useState(params.get("epoca") ?? "all");
-  const [sort, setSort] = useState<SortMode>((params.get("sort") as SortMode) || "fecha_desc");
+  const [query, setQuery] = useState(() => getStringParam(params, "q"));
+  const [page, setPage] = useState(() => getNumberParam(params, "page", 0));
+  const [instancia, setInstancia] = useState(() => getStringParam(params, "instancia", "all"));
+  const [epoca, setEpoca] = useState(() => getStringParam(params, "epoca", "all"));
+  const [sort, setSort] = useState<SortMode>(
+    () => getEnumParam(params, "sort", SORTS, "fecha_desc")
+  );
 
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (query.trim()) next.set("q", query.trim());
-    if (page > 0) next.set("page", String(page));
-    if (instancia !== "all") next.set("instancia", instancia);
-    if (epoca !== "all") next.set("epoca", epoca);
-    if (sort !== "fecha_desc") next.set("sort", sort);
-    router.replace(next.toString() ? `/jurisprudencia?${next}` : "/jurisprudencia", {
+    const qs = buildQueryString({
+      q: query.trim() || undefined,
+      page: page > 0 ? page : undefined,
+      instancia: instancia !== "all" ? instancia : undefined,
+      epoca: epoca !== "all" ? epoca : undefined,
+      sort: sort !== "fecha_desc" ? sort : undefined,
+    });
+    router.replace(`/jurisprudencia${qs}`, {
       scroll: false,
     });
   }, [query, page, instancia, epoca, sort, router]);
@@ -91,15 +98,12 @@ function Content() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="animate-fade-in">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
-            <Scale className="h-4 w-4 text-accent" />
-          </div>
-          <div>
-            <h1 className="text-[16px] font-semibold text-fg">Jurisprudencia</h1>
-            <p className="text-2xs text-fg-4">Semanario Judicial de la Federación · {favoriteCount} favorito{favoriteCount !== 1 && "s"}</p>
-          </div>
-        </div>
+        <PageHeader
+          icon={<Scale className="h-4 w-4 text-accent" />}
+          title="Jurisprudencia"
+          description="Semanario Judicial de la Federación"
+          meta={`${favoriteCount} favorito${favoriteCount !== 1 ? "s" : ""}`}
+        />
       </div>
 
       <SearchBar
@@ -152,20 +156,7 @@ function Content() {
         </div>
       )}
 
-      {searches.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-2xs text-fg-4">Recientes:</span>
-          {searches.slice(0, 5).map((s) => (
-            <button
-              key={s}
-              onClick={() => search(s)}
-              className="rounded-md border border-border/60 px-2 py-1 text-2xs text-fg-4 hover:border-accent/30 hover:text-accent"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+      <RecentSearches searches={searches} onSelect={search} />
 
       {query.length >= 2 && (
         <div className="grid gap-2 md:grid-cols-3">

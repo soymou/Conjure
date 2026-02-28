@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
-import { getRecentSearches, addRecentSearch } from "@/lib/storage";
+import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/storage";
 
 export function useRecentSearches(ns: string) {
   const [searches, setSearches] = useState<string[]>([]);
@@ -15,10 +15,8 @@ export function useRecentSearches(ns: string) {
   }, [ns]);
 
   const clear = useCallback(() => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(`recentSearches:${ns}`);
-      setSearches([]);
-    }
+    clearRecentSearches(ns);
+    setSearches([]);
   }, [ns]);
 
   return { searches, add, clear };

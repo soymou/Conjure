@@ -67,3 +67,8 @@ export function addRecentSearch(ns: string, q: string): void {
   searches = [q, ...searches.filter((s) => s !== q)].slice(0, 10);
   setItem(`${RECENT_SEARCHES_KEY}:${ns}`, searches);
 }
+
+export function clearRecentSearches(ns: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(`${RECENT_SEARCHES_KEY}:${ns}`);
+}

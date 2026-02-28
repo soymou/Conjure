@@ -11,44 +11,47 @@ export type JurisprudenciaCompareItem = Pick<
   "ius" | "rubro" | "fechaPublicacion" | "instancia" | "epoca" | "tipoDocumento" | "textoSnippet"
 >;
 
+const readInitial = () =>
+  getItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []);
+
 export function useJurisprudenciaCompare() {
-  const [, setVersion] = useState(0);
+  const [selected, setSelected] = useState<JurisprudenciaCompareItem[]>(readInitial);
 
-  const getAll = useCallback(() => {
-    return getItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []);
+  const persist = useCallback((next: JurisprudenciaCompareItem[]) => {
+    setSelected(next);
+    setItem(JURISPRUDENCIA_COMPARE_KEY, next);
   }, []);
 
-  const check = useCallback((ius: number) => {
-    return getItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []).some((item) => item.ius === ius);
-  }, []);
+  const getAll = useCallback(() => selected, [selected]);
 
-  const toggle = useCallback((item: JurisprudenciaCompareItem) => {
-    const selected = getItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []);
-    const idx = selected.findIndex((current) => current.ius === item.ius);
+  const check = useCallback(
+    (ius: number) => selected.some((item) => item.ius === ius),
+    [selected]
+  );
 
-    if (idx >= 0) {
-      selected.splice(idx, 1);
-      setItem(JURISPRUDENCIA_COMPARE_KEY, selected);
-      setVersion((v) => v + 1);
-      return false;
-    }
+  const toggle = useCallback(
+    (item: JurisprudenciaCompareItem) => {
+      const exists = selected.some((current) => current.ius === item.ius);
+      const next = exists
+        ? selected.filter((current) => current.ius !== item.ius)
+        : [...selected, item];
+      persist(next);
+      return !exists;
+    },
+    [persist, selected]
+  );
 
-    selected.push(item);
-    setItem(JURISPRUDENCIA_COMPARE_KEY, selected);
-    setVersion((v) => v + 1);
-    return true;
-  }, []);
-
-  const remove = useCallback((ius: number) => {
-    const selected = getItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []).filter((item) => item.ius !== ius);
-    setItem(JURISPRUDENCIA_COMPARE_KEY, selected);
-    setVersion((v) => v + 1);
-  }, []);
+  const remove = useCallback(
+    (ius: number) => {
+      const next = selected.filter((item) => item.ius !== ius);
+      persist(next);
+    },
+    [persist, selected]
+  );
 
   const clear = useCallback(() => {
-    setItem<JurisprudenciaCompareItem[]>(JURISPRUDENCIA_COMPARE_KEY, []);
-    setVersion((v) => v + 1);
-  }, []);
+    persist([]);
+  }, [persist]);
 
   return { getAll, check, toggle, remove, clear };
 }
