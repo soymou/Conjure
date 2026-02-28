@@ -2,41 +2,84 @@
 
 import { useCallback, useState } from "react";
 
+export type ExplainMode = "tecnico" | "claro" | "cliente";
 type Status = "idle" | "loading" | "success" | "error";
+
+type Citation = { quote: string };
+
+type StructuredExplain = {
+  executive: string;
+  keyPoints: string[];
+  favors: string[];
+  limits: string[];
+  risks: string[];
+  recommendation: string;
+  citations: Citation[];
+};
 
 export function useAiExplain() {
   const [status, setStatus] = useState<Status>("idle");
   const [summary, setSummary] = useState("");
+  const [structured, setStructured] = useState<StructuredExplain | null>(null);
+  const [answer, setAnswer] = useState("");
+  const [answerCitations, setAnswerCitations] = useState<Citation[]>([]);
   const [error, setError] = useState<string | undefined>();
 
-  const explain = useCallback(async (text: string) => {
+  const explain = useCallback(async (text: string, mode: ExplainMode) => {
     if (!text.trim() || status === "loading") return;
 
     setStatus("loading");
     setError(undefined);
     setSummary("");
-
-    console.log("/api/ai/explain payload", { text });
+    setStructured(null);
 
     try {
       const res = await fetch("/api/ai/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, mode }),
       });
 
       const payload = await res.json().catch(() => ({}));
-
       if (!res.ok) {
         const detail = payload?.detail || payload?.error;
         throw new Error(detail || "Error desconocido al generar la explicación.");
       }
 
-      if (!payload?.summary) {
-        throw new Error("El servicio no devolvió un resumen válido.");
-      }
+      if (!payload?.summary) throw new Error("El servicio no devolvió un resumen válido.");
 
       setSummary(payload.summary);
+      setStructured(payload.structured ?? null);
+      setStatus("success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
+      setStatus("error");
+    }
+  }, [status]);
+
+  const ask = useCallback(async (text: string, question: string, mode: ExplainMode) => {
+    if (!text.trim() || !question.trim() || status === "loading") return;
+
+    setStatus("loading");
+    setError(undefined);
+
+    try {
+      const res = await fetch("/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, question, mode }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = payload?.detail || payload?.error;
+        throw new Error(detail || "Error desconocido al responder la pregunta.");
+      }
+
+      if (!payload?.answer) throw new Error("El servicio no devolvió una respuesta válida.");
+
+      setAnswer(payload.answer);
+      setAnswerCitations(Array.isArray(payload.citations) ? payload.citations : []);
       setStatus("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
@@ -47,8 +90,11 @@ export function useAiExplain() {
   const reset = useCallback(() => {
     setStatus("idle");
     setSummary("");
+    setStructured(null);
+    setAnswer("");
+    setAnswerCitations([]);
     setError(undefined);
   }, []);
 
-  return { explain, reset, summary, status, error };
+  return { explain, ask, reset, summary, structured, answer, answerCitations, status, error };
 }

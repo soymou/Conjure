@@ -1,15 +1,14 @@
 "use client";
 
-import { AlertTriangle, Loader2 } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
-import { useAiExplain } from "@/hooks/use-ai-explain";
+import { AlertTriangle, Loader2, MessageSquareQuote, Sparkles } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
+import { useAiExplain, type ExplainMode } from "@/hooks/use-ai-explain";
 import { sanitizeHtml } from "@/lib/utils";
 
 interface ExplainPanelProps {
   text: string;
   helper?: ReactNode;
 }
-
 
 function renderMarkdown(md: string) {
   const escaped = md
@@ -62,60 +61,163 @@ function renderMarkdown(md: string) {
   return sanitizeHtml(formatted);
 }
 
+function Block({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="rounded-lg border border-border/60 bg-bg/20 p-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-fg-4">{title}</p>
+      <ul className="space-y-1.5 text-[13px] text-fg-2">
+        {items.map((item, idx) => (
+          <li key={`${title}-${idx}`} className="flex gap-2">
+            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-accent/80" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const MODES: Array<{ key: ExplainMode; label: string }> = [
+  { key: "claro", label: "Claro" },
+  { key: "tecnico", label: "Técnico" },
+  { key: "cliente", label: "Cliente" },
+];
+
 export function ExplainPanel({ text, helper }: ExplainPanelProps) {
-  const { explain, status, summary, error } = useAiExplain();
+  const { explain, ask, status, summary, structured, answer, answerCitations, error } = useAiExplain();
+  const [mode, setMode] = useState<ExplainMode>("claro");
+  const [question, setQuestion] = useState("");
   const canExplain = Boolean(text?.trim());
 
   const buttonLabel = useMemo(() => {
-    if (status === "loading") return "Generando…";
-    if (summary) return "Regenerar";
-    return "Generar explicación";
+    if (status === "loading") return "Procesando…";
+    if (summary) return "Regenerar análisis";
+    return "Generar análisis IA";
   }, [status, summary]);
 
   return (
-    <section className="rounded-xl border border-border/60 bg-surface/60 p-4 shadow-card backdrop-blur-sm">
-      <div className="flex flex-col gap-1">
+    <section className="rounded-xl border border-border/60 bg-surface/60 p-4 shadow-card backdrop-blur-sm space-y-4">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-fg">Explicación en lenguaje claro</p>
-            <p className="text-2xs text-fg-4">Generado con Hugging Face.</p>
+            <p className="text-sm font-semibold text-fg">Copiloto jurídico IA</p>
+            <p className="text-2xs text-fg-4">Resumen ejecutivo, riesgos, recomendación y Q&A contextual con citas.</p>
           </div>
           <button
             disabled={!canExplain || status === "loading"}
-            onClick={() => explain(text)}
-            className="focus-ring inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] font-semibold text-accent transition-all duration-200 hover:bg-accent/20 disabled:pointer-events-none disabled:opacity-50"
+            onClick={() => explain(text, mode)}
+            className="focus-ring inline-flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] font-semibold text-accent transition-all hover:bg-accent/20 disabled:pointer-events-none disabled:opacity-50"
           >
             {status === "loading" && <Loader2 className="h-3 w-3 animate-spin" />}
+            <Sparkles className="h-3.5 w-3.5" />
             {buttonLabel}
           </button>
         </div>
+
+        <div className="inline-flex w-fit rounded-lg border border-border/60 bg-bg/20 p-1">
+          {MODES.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              className={`rounded-md px-2.5 py-1 text-[11px] transition ${
+                mode === m.key ? "bg-accent/20 text-accent" : "text-fg-4 hover:text-fg-2"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         {helper && <div className="text-2xs text-fg-4">{helper}</div>}
       </div>
 
-      <div className="mt-4 space-y-3">
-        {!summary && status === "idle" && (
-          <p className="text-2xs text-fg-4">Haz clic para obtener un resumen amigable del texto completo de la tesis.</p>
-        )}
-        {status === "error" && (
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-2xs text-red-400/80">
-            <div className="flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" />
-              <p>{error || "No se pudo generar la explicación."}</p>
-            </div>
-            <p className="mt-1 text-[10px] text-red-400/70">Revisa que el servidor tenga la clave de Hugging Face configurada y que no se haya superado la cuota gratuita.</p>
+      {!summary && status === "idle" && (
+        <p className="text-2xs text-fg-4">Genera un análisis completo o haz preguntas puntuales sobre esta tesis.</p>
+      )}
+
+      {status === "error" && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-2xs text-red-300/90">
+          <div className="flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            <p>{error || "No se pudo completar la solicitud."}</p>
           </div>
-        )}
-        {summary && (
-          <div className="rounded-xl border border-border/50 bg-bg/10 p-3 text-[13px] leading-relaxed text-fg">
-            <div className="space-y-2 prose prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0">
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
-            </div>
+        </div>
+      )}
+
+      {summary && structured && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border/60 bg-bg/10 p-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-fg-4">Resumen ejecutivo</p>
+            <div
+              className="prose prose-invert max-w-none text-[13px] leading-relaxed prose-p:my-1"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(structured.executive || summary) }}
+            />
           </div>
-        )}
-        {status === "loading" && (
-          <p className="text-2xs text-fg-4">El modelo está procesando la solicitud. Esto puede tardar unos segundos dependiendo de la carga.</p>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Block title="Puntos clave" items={structured.keyPoints} />
+            <Block title="Qué favorece" items={structured.favors} />
+            <Block title="Límites" items={structured.limits} />
+            <Block title="Riesgos" items={structured.risks} />
+          </div>
+
+          {structured.recommendation && (
+            <div className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 p-3">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">Siguiente paso sugerido</p>
+              <p className="text-[13px] text-emerald-100/90">{structured.recommendation}</p>
+            </div>
+          )}
+
+          {structured.citations.length > 0 && (
+            <div className="rounded-lg border border-border/60 bg-bg/10 p-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-fg-4">Citas del texto fuente</p>
+              <div className="space-y-2">
+                {structured.citations.map((c, idx) => (
+                  <p key={`cite-${idx}`} className="text-[12px] text-fg-3 border-l-2 border-accent/40 pl-2 italic">“{c.quote}”</p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-border/60 bg-bg/10 p-3 space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-4">Preguntar sobre esta tesis</p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ej. ¿Esto aplica para despido injustificado en sector público?"
+            className="w-full rounded-lg border border-border/70 bg-bg/30 px-3 py-2 text-[13px] text-fg outline-none focus:border-accent/50"
+          />
+          <button
+            disabled={!question.trim() || status === "loading" || !canExplain}
+            onClick={() => ask(text, question, mode)}
+            className="focus-ring inline-flex items-center justify-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-[12px] font-semibold text-accent transition hover:bg-accent/20 disabled:pointer-events-none disabled:opacity-50"
+          >
+            <MessageSquareQuote className="h-3.5 w-3.5" />
+            Preguntar
+          </button>
+        </div>
+
+        {answer && (
+          <div className="mt-1 space-y-2">
+            <div className="rounded-lg border border-border/60 bg-bg/20 p-3 text-[13px] text-fg-2 leading-relaxed">
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(answer) }} />
+            </div>
+            {answerCitations.length > 0 && (
+              <div className="space-y-1">
+                {answerCitations.map((c, idx) => (
+                  <p key={`a-cite-${idx}`} className="text-[12px] text-fg-3 border-l-2 border-accent/40 pl-2 italic">“{c.quote}”</p>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {status === "loading" && <p className="text-2xs text-fg-4">Procesando solicitud en Hugging Face…</p>}
     </section>
   );
 }
