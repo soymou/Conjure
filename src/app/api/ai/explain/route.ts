@@ -111,6 +111,30 @@ function parseJsonLoose(raw: string) {
   }
 }
 
+
+
+function extractAnswerFromRaw(raw: string) {
+  const text = raw.trim();
+  if (!text) return "";
+
+  const parsed = parseJsonLoose(text);
+  if (parsed && typeof (parsed as { answer?: unknown }).answer === "string") {
+    const v = String((parsed as { answer: string }).answer).trim();
+    if (v) return v;
+  }
+
+  const m = text.match(/["']?answer["']?\s*:\s*"([\s\S]*?)"\s*(?:,|})/i);
+  if (m?.[1]) {
+    return m[1]
+      .replace(/\n/g, "
+")
+      .replace(/\"/g, '"')
+      .trim();
+  }
+
+  return text;
+}
+
 function normalizeCitations(input: unknown): Citation[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -188,7 +212,7 @@ export async function POST(req: Request) {
   const parsed = parseJsonLoose(content);
 
   if (question) {
-    const answer = parsed && typeof (parsed as { answer?: unknown }).answer === "string" ? String((parsed as { answer: string }).answer).trim() : content;
+    const answer = extractAnswerFromRaw(content);
     const citations = normalizeCitations(parsed && typeof parsed === "object" ? (parsed as { citations?: unknown }).citations : undefined);
     return NextResponse.json({ answer, citations });
   }
