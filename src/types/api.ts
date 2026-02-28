@@ -31,10 +31,15 @@ export interface JurisprudenciaDetalle {
   ius: number;
   rubro: string;
   texto: string;
+  instancia?: string;
+  epoca?: string;
+  tipoDocumento?: string;
+  fechaPublicacion?: string;
+  precedente?: string;
   [key: string]: unknown;
 }
 
-// ── Artículos (Jurislex) ──
+// ── Artículos (Jurislex) ──
 export interface ArticuloItem {
   idArticulo: number;
   idLegislacion: number;
@@ -54,4 +59,26 @@ export interface ArticulosResponse {
   total: number;
   totalArticulos: number;
   items: ArticuloItem[];
+}
+
+export class ApiError extends Error {
+  status: number;
+  statusText: string;
+  path: string;
+  details?: unknown;
+
+  constructor({ status, statusText, path, message, details }: {
+    status: number;
+    statusText: string;
+    path: string;
+    message?: string;
+    details?: unknown;
+  }) {
+    super(message ?? `API ${status}: ${statusText}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.path = path;
+    this.details = details;
+  }
 }
