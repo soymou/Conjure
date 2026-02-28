@@ -17,6 +17,7 @@ import { buildQueryString, getNumberParam, getOptionalNumberParam, getStringPara
 import { FileText, ArrowLeft } from "lucide-react";
 
 const PER_PAGE = 20;
+const LEYES_PER_PAGE = 16;
 
 function Content() {
   const params = useSearchParams();
@@ -28,6 +29,7 @@ function Content() {
   const [nombre, setNombre] = useState(() => getStringParam(params, "nombre"));
   const [leyQ, setLeyQ] = useState(() => getStringParam(params, "q"));
   const [pg, setPg] = useState(() => getNumberParam(params, "page", 0));
+  const [leyPg, setLeyPg] = useState(() => getNumberParam(params, "leyPage", 0));
 
   useEffect(() => {
     const qs = buildQueryString({
@@ -36,9 +38,10 @@ function Content() {
       nombre: nombre || undefined,
       q: leyQ.trim() || undefined,
       page: pg > 0 ? pg : undefined,
+      leyPage: leyPg > 0 ? leyPg : undefined,
     });
     router.replace(`/articulos${qs}`, { scroll: false });
-  }, [cat, ley, nombre, leyQ, pg, router]);
+  }, [cat, ley, nombre, leyQ, pg, leyPg, router]);
 
   const { data: leyes, isLoading: leyesL } = useLeyes(
     !ley ? leyQ || undefined : undefined
@@ -51,6 +54,10 @@ function Content() {
   );
 
   const totalPages = arts ? Math.ceil(arts.totalArticulos / PER_PAGE) : 0;
+  const totalLeyesPages = leyes ? Math.ceil(leyes.length / LEYES_PER_PAGE) : 0;
+  const leyesPageData = leyes
+    ? leyes.slice(leyPg * LEYES_PER_PAGE, (leyPg + 1) * LEYES_PER_PAGE)
+    : [];
 
   const select = (c: number, id: number, n: string) => {
     setCat(c);
@@ -64,6 +71,16 @@ function Content() {
     setNombre("");
     setPg(0);
   };
+
+  useEffect(() => {
+    setLeyPg(0);
+  }, [leyQ]);
+
+  useEffect(() => {
+    if (!leyes) return;
+    const max = Math.max(0, Math.ceil(leyes.length / LEYES_PER_PAGE) - 1);
+    if (leyPg > max) setLeyPg(max);
+  }, [leyes, leyPg]);
 
   if (ley !== null && cat !== null) {
     return (
@@ -136,7 +153,7 @@ function Content() {
             {leyes.length} legislación{leyes.length !== 1 && "es"}
           </p>
           <div className="stagger-fade-up grid gap-2 md:grid-cols-2">
-            {leyes.map((l) => (
+            {leyesPageData.map((l) => (
               <div
                 key={l.id}
                 onClick={() => select(l.categoria, l.id, l.nombre)}
@@ -146,6 +163,9 @@ function Content() {
               </div>
             ))}
           </div>
+          {totalLeyesPages > 1 && (
+            <Pagination page={leyPg} totalPages={totalLeyesPages} onPageChange={setLeyPg} />
+          )}
         </>
       )}
     </div>
