@@ -28,7 +28,8 @@ export function useAiExplain() {
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(payload?.error || "Error desconocido al generar la explicación.");
+        const detail = payload?.detail || payload?.error;
+        throw new Error(detail || "Error desconocido al generar la explicación.");
       }
 
       if (!payload?.summary) {

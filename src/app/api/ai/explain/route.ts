@@ -109,8 +109,16 @@ export async function POST(req: Request) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message = data && (data as { error?: string }).error;
-    return NextResponse.json({ error: message || `Hugging Face respondió con ${response.status}.` }, { status: response.status });
+    const message = data && (data as { error?: unknown }).error;
+    const detail = data ? JSON.stringify(data, null, 2) : `status ${response.status}`;
+    return NextResponse.json(
+      {
+        error: message || `Hugging Face respondió con ${response.status}.`,
+        detail,
+        status: response.status,
+      },
+      { status: response.status }
+    );
   }
 
   const summary = extractSummary(data);
