@@ -129,7 +129,7 @@ function normalizeExplain(parsed: unknown): StructuredExplain | null {
   if (!parsed || typeof parsed !== "object") return null;
   const data = parsed as Record<string, unknown>;
 
-  const toArr = (v: unknown) => (Array.isArray(v) ? v.filter((i): i is string => typeof i === "string" && i.trim()).map((i) => i.trim()) : []);
+  const toArr = (v: unknown) => (Array.isArray(v) ? v.filter((i): i is string => typeof i === "string" && Boolean(i.trim())).map((i) => i.trim()) : []);
   const executive = typeof data.executive === "string" ? data.executive.trim() : "";
   const recommendation = typeof data.recommendation === "string" ? data.recommendation.trim() : "";
   const keyPoints = toArr(data.keyPoints);
