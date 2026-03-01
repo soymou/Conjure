@@ -111,7 +111,12 @@ function parseJsonLoose(raw: string) {
   }
 }
 
-
+function decodeEscapes(text: string) {
+  return text
+    .replace(/\\n/g, "\n")
+    .replace(/\\"/g, '"')
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+}
 
 function extractAnswerFromRaw(raw: string) {
   const text = raw.trim();
@@ -120,19 +125,14 @@ function extractAnswerFromRaw(raw: string) {
   const parsed = parseJsonLoose(text);
   if (parsed && typeof (parsed as { answer?: unknown }).answer === "string") {
     const v = String((parsed as { answer: string }).answer).trim();
-    if (v) return v;
+    if (v) return decodeEscapes(v);
   }
 
-  const m = text.match(/["']?answer["']?\s*:\s*"([\s\S]*?)"\s*(?:,|})/i);
-  if (m?.[1]) {
-    return m[1]
-      .replace(/\\n/g, "\n")
-      .replace(/\\"/g, '"')
-      .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
-      .trim();
-  }
+  const answerMatch = text.match(/"answer"\s*:\s*"((?:\\.|[^"\\])*)"/i)
+    || text.match(/answer\s*:\s*"((?:\\.|[^"\\])*)"/i);
+  if (answerMatch?.[1]) return decodeEscapes(answerMatch[1].trim());
 
-  return text;
+  return decodeEscapes(text);
 }
 
 function normalizeCitations(input: unknown): Citation[] {
@@ -142,7 +142,7 @@ function normalizeCitations(input: unknown): Citation[] {
       if (!it || typeof it !== "object") return null;
       const quote = (it as { quote?: unknown }).quote;
       if (typeof quote !== "string") return null;
-      const cleaned = quote.trim();
+      const cleaned = decodeEscapes(quote.trim());
       return cleaned ? { quote: cleaned } : null;
     })
     .filter((it): it is Citation => Boolean(it))
@@ -153,9 +153,9 @@ function normalizeExplain(parsed: unknown): StructuredExplain | null {
   if (!parsed || typeof parsed !== "object") return null;
   const data = parsed as Record<string, unknown>;
 
-  const toArr = (v: unknown) => (Array.isArray(v) ? v.filter((i): i is string => typeof i === "string" && Boolean(i.trim())).map((i) => i.trim()) : []);
-  const executive = typeof data.executive === "string" ? data.executive.trim() : "";
-  const recommendation = typeof data.recommendation === "string" ? data.recommendation.trim() : "";
+  const toArr = (v: unknown) => (Array.isArray(v) ? v.filter((i): i is string => typeof i === "string" && Boolean(i.trim())).map((i) => decodeEscapes(i.trim())) : []);
+  const executive = typeof data.executive === "string" ? decodeEscapes(data.executive.trim()) : "";
+  const recommendation = typeof data.recommendation === "string" ? decodeEscapes(data.recommendation.trim()) : "";
   const keyPoints = toArr(data.keyPoints);
   const favors = toArr(data.favors);
   const limits = toArr(data.limits);
@@ -220,9 +220,9 @@ export async function POST(req: Request) {
   const structured = normalizeExplain(parsed);
   if (!structured) {
     return NextResponse.json({
-      summary: content,
+      summary: decodeEscapes(content),
       structured: {
-        executive: content,
+        executive: decodeEscapes(content),
         keyPoints: [],
         favors: [],
         limits: [],

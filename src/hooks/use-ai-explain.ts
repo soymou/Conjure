@@ -24,7 +24,6 @@ type QAItem = {
   createdAt: string;
 };
 
-
 function parseJsonLoose(raw: string) {
   const text = raw.trim();
   if (!text) return null;
@@ -54,6 +53,13 @@ function toStringArray(value: unknown) {
     : [];
 }
 
+function decodeEscapes(text: string) {
+  return text
+    .replace(/\\n/g, "\n")
+    .replace(/\\"/g, '"')
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+}
+
 function normalizeStructuredFromAny(raw: unknown): StructuredExplain | null {
   const parsed =
     typeof raw === "string"
@@ -64,16 +70,16 @@ function normalizeStructuredFromAny(raw: unknown): StructuredExplain | null {
 
   if (!parsed) return null;
 
-  const executive = typeof parsed.executive === "string" ? parsed.executive.trim() : "";
-  const recommendation = typeof parsed.recommendation === "string" ? parsed.recommendation.trim() : "";
-  const keyPoints = toStringArray(parsed.keyPoints);
-  const favors = toStringArray(parsed.favors);
-  const limits = toStringArray(parsed.limits);
-  const risks = toStringArray(parsed.risks);
+  const executive = typeof parsed.executive === "string" ? decodeEscapes(parsed.executive.trim()) : "";
+  const recommendation = typeof parsed.recommendation === "string" ? decodeEscapes(parsed.recommendation.trim()) : "";
+  const keyPoints = toStringArray(parsed.keyPoints).map(decodeEscapes);
+  const favors = toStringArray(parsed.favors).map(decodeEscapes);
+  const limits = toStringArray(parsed.limits).map(decodeEscapes);
+  const risks = toStringArray(parsed.risks).map(decodeEscapes);
   const citations = Array.isArray(parsed.citations)
     ? parsed.citations
         .map((it) => (it && typeof it === "object" && typeof (it as { quote?: unknown }).quote === "string"
-          ? { quote: String((it as { quote: string }).quote).trim() }
+          ? { quote: decodeEscapes(String((it as { quote: string }).quote).trim()) }
           : null))
         .filter((it): it is Citation => Boolean(it && it.quote))
         .slice(0, 4)
@@ -102,19 +108,17 @@ function normalizeAnswerText(raw: unknown) {
 
   try {
     const parsed = JSON.parse(candidate) as { answer?: unknown };
-    if (typeof parsed?.answer === "string" && parsed.answer.trim()) return parsed.answer.trim();
+    if (typeof parsed?.answer === "string" && parsed.answer.trim()) return decodeEscapes(parsed.answer.trim());
   } catch {
-    const m = candidate.match(/["']?answer["']?\s*:\s*"([\s\S]*?)"\s*(?:,|})/i);
-    if (m?.[1]) {
-      return m[1]
-        .replace(/\\n/g, "\n")
-        .replace(/\\"/g, '"')
-        .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
-        .trim();
-    }
+    const m = candidate.match(/"answer"\s*:\s*"((?:\\.|[^"\\])*)"/i)
+      || candidate.match(/answer\s*:\s*"((?:\\.|[^"\\])*)"/i);
+    if (m?.[1]) return decodeEscapes(m[1].trim());
   }
 
-  return text;
+  const reparsed = parseJsonLoose(candidate);
+  if (reparsed && typeof reparsed.answer === "string") return decodeEscapes(reparsed.answer.trim());
+
+  return decodeEscapes(text);
 }
 
 export function useAiExplain() {
@@ -152,7 +156,7 @@ export function useAiExplain() {
       const normalizedStructured = normalizeStructuredFromAny(payload.structured)
         ?? normalizeStructuredFromAny(payload.summary);
 
-      setSummary(normalizedStructured?.executive || String(payload.summary));
+      setSummary(normalizedStructured?.executive || decodeEscapes(String(payload.summary)));
       setStructured(normalizedStructured);
       setStatus("success");
     } catch (err) {
@@ -183,7 +187,16 @@ export function useAiExplain() {
       if (!payload?.answer) throw new Error("El servicio no devolvió una respuesta válida.");
 
       const nextAnswer = normalizeAnswerText(payload.answer);
-      const nextCitations = Array.isArray(payload.citations) ? payload.citations : [];
+      const nextCitations = Array.isArray(payload.citations)
+        ? payload.citations
+            .map((c: unknown) => {
+              if (!c || typeof c !== "object") return null;
+              const quote = (c as { quote?: unknown }).quote;
+              return typeof quote === "string" && quote.trim() ? { quote: decodeEscapes(quote.trim()) } : null;
+            })
+            .filter((c: Citation | null): c is Citation => Boolean(c))
+        : [];
+
       setAnswer(nextAnswer);
       setAnswerCitations(nextCitations);
       setQaHistory((prev) => [
