@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-const MODEL = process.env.HUGGINGFACE_MODEL?.trim() || "meta-llama/Llama-3.2-3B-Instruct";
+const FALLBACK_MODEL = "meta-llama/Llama-3.2-3B-Instruct";
+const RAW_MODEL = process.env.HUGGINGFACE_MODEL?.trim() || FALLBACK_MODEL;
+const MODEL = /flan-t5-base/i.test(RAW_MODEL) ? FALLBACK_MODEL : RAW_MODEL;
 const MAX_INPUT_LENGTH = 8_000;
 const MAX_TOKENS = 900;
 
